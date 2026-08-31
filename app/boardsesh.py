@@ -37,6 +37,7 @@ class CatalogClimb:
     benchmark_difficulty: float | None
     ascensionist_count: int
     quality_average: float | None
+    characteristics: tuple[str, ...]
 
 
 def resolve_snapshot_entry(manifest: Any, layout_id: int) -> SnapshotEntry:
@@ -92,6 +93,14 @@ def validate_snapshot(path: Path) -> None:
             if not {"board_climbs", "board_climb_stats"}.issubset(tables):
                 raise BoardSeshError(
                     "BoardSesh snapshot is missing required catalog tables"
+                )
+            climb_columns = {
+                row[1]
+                for row in connection.execute("PRAGMA table_info(board_climbs)")
+            }
+            if "characteristics" not in climb_columns:
+                raise BoardSeshError(
+                    "BoardSesh snapshot is missing board_climbs.characteristics"
                 )
         finally:
             connection.close()
@@ -207,6 +216,24 @@ class SnapshotService:
                     pass
 
 
+def _parse_characteristics(value: Any, climb_uuid: str) -> tuple[str, ...]:
+    if value is None or value == "":
+        return ()
+    try:
+        parsed = json.loads(value) if isinstance(value, str) else value
+    except json.JSONDecodeError as exc:
+        raise BoardSeshError(
+            f"Invalid characteristics JSON for BoardSesh climb {climb_uuid}"
+        ) from exc
+    if not isinstance(parsed, list) or any(
+        not isinstance(item, str) for item in parsed
+    ):
+        raise BoardSeshError(
+            f"Invalid characteristics for BoardSesh climb {climb_uuid}"
+        )
+    return tuple(parsed)
+
+
 def read_catalog(
     path: Path,
     layout_id: int,
@@ -233,7 +260,8 @@ def read_catalog(
                 stats.display_difficulty,
                 stats.benchmark_difficulty,
                 COALESCE(stats.ascensionist_count, 0) AS ascensionist_count,
-                stats.quality_average
+                stats.quality_average,
+                climbs.characteristics
             FROM board_climbs AS climbs
             JOIN board_climb_stats AS stats
               ON stats.board_type = climbs.board_type
@@ -275,6 +303,9 @@ def read_catalog(
                     float(row["quality_average"])
                     if row["quality_average"] is not None
                     else None
+                ),
+                characteristics=_parse_characteristics(
+                    row["characteristics"], str(row["uuid"])
                 ),
             )
             for row in rows

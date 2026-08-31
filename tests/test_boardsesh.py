@@ -26,7 +26,8 @@ def create_snapshot(path: Path):
                 setter_username TEXT,
                 frames TEXT,
                 is_listed INTEGER,
-                is_draft INTEGER
+                is_draft INTEGER,
+                characteristics TEXT
             );
             CREATE TABLE board_climb_stats (
                 board_type TEXT,
@@ -40,13 +41,13 @@ def create_snapshot(path: Path):
             """
         )
         climbs = [
-            ("moonboard", "public-40", 6, "Alpha", "", "A", "p1r42p2r44", 1, 0),
-            ("moonboard", "draft", 6, "Draft", "", "B", "p1r42p2r44", 1, 1),
-            ("moonboard", "unlisted", 6, "Hidden", "", "C", "p1r42p2r44", 0, 0),
-            ("moonboard", "other-layout", 2, "Other", "", "D", "p1r42p2r44", 1, 0),
+            ("moonboard", "public-40", 6, "Alpha", "", "A", "p1r42p2r44", 1, 0, '["method_no_kickboard"]'),
+            ("moonboard", "draft", 6, "Draft", "", "B", "p1r42p2r44", 1, 1, None),
+            ("moonboard", "unlisted", 6, "Hidden", "", "C", "p1r42p2r44", 0, 0, "[]"),
+            ("moonboard", "other-layout", 2, "Other", "", "D", "p1r42p2r44", 1, 0, '["method_footless"]'),
         ]
         connection.executemany(
-            "INSERT INTO board_climbs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO board_climbs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             climbs,
         )
         stats = [
@@ -103,6 +104,27 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual({item.angle for item in all_angles}, {25, 40})
         self.assertEqual([item.uuid for item in forty_only], ["public-40"])
         self.assertEqual(forty_only[0].display_difficulty, 18.0)
+        self.assertEqual(
+            forty_only[0].characteristics,
+            ("method_no_kickboard",),
+        )
+
+    def test_rejects_malformed_characteristics(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "snapshot.db"
+            create_snapshot(path)
+            connection = sqlite3.connect(path)
+            try:
+                connection.execute(
+                    "UPDATE board_climbs SET characteristics = '{' "
+                    "WHERE uuid = 'public-40'"
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            with self.assertRaisesRegex(BoardSeshError, "characteristics JSON"):
+                read_catalog(path, 6)
 
     def test_rejects_database_without_required_tables(self):
         with tempfile.TemporaryDirectory() as directory:

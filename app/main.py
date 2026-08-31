@@ -34,7 +34,7 @@ snapshot_service = SnapshotService(
 
 app = FastAPI(
     title="BoardSesh to CRUX Converter",
-    version="0.1.0",
+    version="0.2.0",
 )
 app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=APP_DIR / "templates")
@@ -52,13 +52,6 @@ class ConvertRequest(BaseModel):
     mapping_payload: Any | None = None
     angle: int | None = Field(default=None, ge=0, le=90)
     grade_system: Literal["font", "v_scale", "boardsesh"] = "font"
-    foot_rules: Literal[
-        "feet_follow_hands",
-        "any_feet",
-        "campus",
-        "feet_follow_hands_open_kicker",
-        "only_marked_feet",
-    ] = "feet_follow_hands"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -79,9 +72,17 @@ async def health():
 
 
 @app.get("/schema/crux-import-v1.schema.json")
-async def schema():
+async def schema_v1():
     return FileResponse(
         PROJECT_DIR / "schema" / "crux-import-v1.schema.json",
+        media_type="application/schema+json",
+    )
+
+
+@app.get("/schema/crux-import-v2.schema.json")
+async def schema_v2():
+    return FileResponse(
+        PROJECT_DIR / "schema" / "crux-import-v2.schema.json",
         media_type="application/schema+json",
     )
 
@@ -137,10 +138,7 @@ async def convert(payload: ConvertRequest):
             mapping,
             snapshot_entry,
             settings.manifest_url,
-            ConversionOptions(
-                grade_system=payload.grade_system,
-                foot_rules=payload.foot_rules,
-            ),
+            ConversionOptions(grade_system=payload.grade_system),
         )
     except MappingError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

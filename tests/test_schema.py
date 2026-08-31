@@ -14,7 +14,7 @@ class SchemaTests(unittest.TestCase):
         schema_path = (
             Path(__file__).resolve().parents[1]
             / "schema"
-            / "crux-import-v1.schema.json"
+            / "crux-import-v2.schema.json"
         )
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         Draft202012Validator.check_schema(schema)
@@ -46,6 +46,7 @@ class SchemaTests(unittest.TestCase):
             benchmark_difficulty=None,
             ascensionist_count=0,
             quality_average=None,
+            characteristics=(),
         )
         document = convert_catalog(
             [climb],

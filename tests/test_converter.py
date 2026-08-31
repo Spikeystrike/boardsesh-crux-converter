@@ -6,6 +6,7 @@ from app.converter import (
     ConversionError,
     ConversionOptions,
     convert_catalog,
+    foot_rule_from_characteristics,
     grade_label,
     parse_frames,
 )
@@ -34,7 +35,11 @@ SNAPSHOT = SnapshotEntry(
 )
 
 
-def climb(frames="p1r42p2r43p3r44", uuid="climb-1"):
+def climb(
+    frames="p1r42p2r43p3r44",
+    uuid="climb-1",
+    characteristics=(),
+):
     return CatalogClimb(
         uuid=uuid,
         name="Test problem",
@@ -46,6 +51,7 @@ def climb(frames="p1r42p2r43p3r44", uuid="climb-1"):
         benchmark_difficulty=18.0,
         ascensionist_count=12,
         quality_average=3.5,
+        characteristics=tuple(characteristics),
     )
 
 
@@ -75,6 +81,44 @@ class GradeTests(unittest.TestCase):
         self.assertIsNone(grade_label(18.5, "font"))
 
 
+class FootRuleTests(unittest.TestCase):
+    def test_default_is_feet_follow_hands_with_open_kicker(self):
+        self.assertEqual(
+            foot_rule_from_characteristics(["crimpy", "powerful"]),
+            "feet_follow_hands_open_kicker",
+        )
+
+    def test_maps_moonboard_methods(self):
+        self.assertEqual(
+            foot_rule_from_characteristics(["method_no_kickboard"]),
+            "feet_follow_hands",
+        )
+        self.assertEqual(
+            foot_rule_from_characteristics(["method_footless"]),
+            "campus",
+        )
+
+    def test_maps_generic_characteristics(self):
+        self.assertEqual(
+            foot_rule_from_characteristics(["no_kickboard"]),
+            "feet_follow_hands",
+        )
+        self.assertEqual(
+            foot_rule_from_characteristics(["campus"]),
+            "campus",
+        )
+
+    def test_rejects_footless_with_kickboard(self):
+        with self.assertRaisesRegex(ConversionError, "no exact CRUX"):
+            foot_rule_from_characteristics(["method_footless_kickboard"])
+
+    def test_rejects_multiple_moonboard_methods(self):
+        with self.assertRaisesRegex(ConversionError, "Multiple MoonBoard"):
+            foot_rule_from_characteristics(
+                ["method_footless", "method_no_kickboard"]
+            )
+
+
 class ConversionTests(unittest.TestCase):
     def test_converts_complete_climb(self):
         document = convert_catalog(
@@ -87,11 +131,16 @@ class ConversionTests(unittest.TestCase):
         )
 
         self.assertEqual(document["format"], "crux-climb-import")
-        self.assertEqual(document["version"], 1)
+        self.assertEqual(document["version"], 2)
         self.assertEqual(document["summary"]["included_climbs"], 1)
         converted = document["climbs"][0]
         self.assertEqual(converted["external_id"], "boardsesh:climb-1:40")
         self.assertEqual(converted["grade"], "6b")
+        self.assertEqual(
+            converted["foot_rules"],
+            "feet_follow_hands_open_kicker",
+        )
+        self.assertEqual(converted["source"]["characteristics"], [])
         self.assertEqual(
             converted["holds"],
             [
@@ -99,6 +148,46 @@ class ConversionTests(unittest.TestCase):
                 {"id": "crux-hand", "hold_type": "hand"},
                 {"id": "crux-finish", "hold_type": "finish"},
             ],
+        )
+
+    def test_derives_foot_rule_per_climb(self):
+        document = convert_catalog(
+            [
+                climb(uuid="no-kicker", characteristics=["method_no_kickboard"]),
+                climb(uuid="campus", characteristics=["method_footless"]),
+            ],
+            MAPPING,
+            SNAPSHOT,
+            "https://example.test/manifest.json",
+            ConversionOptions(),
+        )
+
+        self.assertEqual(
+            [item["foot_rules"] for item in document["climbs"]],
+            ["feet_follow_hands", "campus"],
+        )
+        self.assertEqual(
+            document["summary"]["foot_rule_counts"],
+            {"feet_follow_hands": 1, "campus": 1},
+        )
+
+    def test_skips_footless_with_kickboard_with_diagnostics(self):
+        document = convert_catalog(
+            [climb(characteristics=["method_footless_kickboard"])],
+            MAPPING,
+            SNAPSHOT,
+            "https://example.test/manifest.json",
+            ConversionOptions(),
+        )
+
+        self.assertEqual(document["climbs"], [])
+        self.assertEqual(
+            document["summary"]["skipped_unsupported_foot_rule"],
+            1,
+        )
+        self.assertEqual(
+            document["summary"]["skipped_examples"][0]["reason"],
+            "unsupported_foot_rule",
         )
 
     def test_skips_incomplete_mapping_with_diagnostics(self):

@@ -7,7 +7,7 @@ mit einem persistenten Mapping aus der
 verknüpft und eine versionierte CRUX-Importdatei erzeugt.
 
 > Status: erster importierbarer Austauschformat-Entwurf. Die App schreibt noch
-> nicht direkt in CRUX. Das Format `crux-climb-import/v1` ist in diesem Projekt
+> nicht direkt in CRUX. Das Format `crux-climb-import/v2` ist in diesem Projekt
 > definiert und bildet die öffentlich dokumentierten CRUX-Climb-Felder ab.
 
 ## Was der Konverter macht
@@ -18,9 +18,12 @@ verknüpft und eine versionierte CRUX-Importdatei erzeugt.
 - akzeptiert alternativ exportierte Mapping-JSON-Dateien;
 - filtert optional nach Wandwinkel;
 - konvertiert Start-, Hand- und Finish-Griffe in CRUX-Hold-Typen;
+- leitet die CRUX-Fußregel pro Boulder aus `board_climbs.characteristics` ab;
 - erhält Setter, Grad, Winkel, Benchmark-Status und Community-Statistiken;
 - überspringt Boulder mit fehlenden Hold-Zuordnungen vollständig und dokumentiert
   sie in `summary.skipped_examples`;
+- überspringt `method_footless_kickboard`, weil CRUX dafür ohne ein separates
+  Kicker-Hold-Mapping keine exakt passende Regel anbietet;
 - cached den validierten SQLite-Snapshot in einem Docker-Volume.
 
 Das Mapping bleibt strikt an die CRUX-Wand gebunden:
@@ -55,7 +58,8 @@ Bridge-URL entgegen und sollte ohne vorgeschaltete Zugriffskontrolle nicht
 1. Bridge-URL und CRUX Wall-ID eingeben und die gespeicherten Mappings laden.
 2. Das gewünschte Mapping auswählen. Board, Setup und BoardSesh-Layout-ID werden
    aus dem persistenten Mapping übernommen.
-3. Optional Winkel, Gradskala und Fußregel wählen.
+3. Optional Winkel und Gradskala wählen. Die Fußregel kommt automatisch aus den
+   BoardSesh-Characteristics.
 4. **CRUX-Importdatei erzeugen** anklicken.
 
 Statt der Bridge kann eine JSON-Datei geöffnet werden. Unterstützt werden:
@@ -80,17 +84,37 @@ und erwartet, dass Verbraucher die jeweilige Snapshot-URL immer neu über den
 stabilen Manifest ermitteln. Der Konverter folgt diesem Modell, prüft
 `PRAGMA quick_check` und lädt denselben Snapshot nur einmal.
 
-## Importformat v1
+## Fußregeln
+
+BoardSesh beschreibt die MoonBoard-Methode in
+`board_climbs.characteristics`. Der Konverter bildet sie so ab:
+
+| BoardSesh-Characteristic | Bedeutung | CRUX `foot_rules` |
+| --- | --- | --- |
+| kein Methodeneintrag | Feet follow hands, Kicker offen | `feet_follow_hands_open_kicker` |
+| `method_no_kickboard` | Feet follow hands, Kicker gesperrt | `feet_follow_hands` |
+| `method_footless` | Keine Füße, kein Kicker | `campus` |
+| `method_footless_kickboard` | Nur Kicker darf als Fuß genutzt werden | wird mit Diagnose übersprungen |
+
+Die generischen BoardSesh-Characteristics `no_kickboard` und `campus` werden
+ebenfalls auf `feet_follow_hands` beziehungsweise `campus` abgebildet.
+`only_marked_feet` wäre für `method_footless_kickboard` nur dann korrekt, wenn
+alle Kicker-Griffe zusätzlich als CRUX-Fußgriffe markiert würden. Das aktuelle
+persistente Mapping unterscheidet Kicker-Griffe noch nicht separat, daher nimmt
+der Konverter hier keine stillschweigend falsche Zuordnung vor.
+
+## Importformat v2
 
 Das vollständige Schema liegt unter
-[`schema/crux-import-v1.schema.json`](schema/crux-import-v1.schema.json).
+[`schema/crux-import-v2.schema.json`](schema/crux-import-v2.schema.json).
+Das bisherige v1-Schema bleibt für bereits erzeugte Dateien erhalten.
 
 Gekürztes Beispiel:
 
 ```json
 {
   "format": "crux-climb-import",
-  "version": 1,
+  "version": 2,
   "target": {
     "provider": "CRUX",
     "wall_id": 216943,
@@ -100,7 +124,13 @@ Gekürztes Beispiel:
   "summary": {
     "input_climbs": 1234,
     "included_climbs": 1170,
-    "skipped_missing_mapping": 64
+    "skipped_missing_mapping": 64,
+    "skipped_unsupported_foot_rule": 3,
+    "foot_rule_counts": {
+      "feet_follow_hands_open_kicker": 1150,
+      "feet_follow_hands": 18,
+      "campus": 2
+    }
   },
   "climbs": [
     {
@@ -108,7 +138,7 @@ Gekürztes Beispiel:
       "name": "Beispiel",
       "grade": "6b",
       "angle": "40",
-      "foot_rules": "feet_follow_hands",
+      "foot_rules": "feet_follow_hands_open_kicker",
       "holds": [
         {"id": "8ba97f45a6656519", "hold_type": "start"}
       ]

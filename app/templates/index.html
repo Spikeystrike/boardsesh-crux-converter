@@ -64,7 +64,7 @@
           </div>
         </div>
 
-        <div class="grid three">
+        <div class="grid two">
           <label>
             Wandwinkel
             <select id="angle">
@@ -81,17 +81,12 @@
               <option value="boardsesh">BoardSesh/MoonBoard</option>
             </select>
           </label>
-          <label>
-            Fußregel
-            <select id="foot-rules">
-              <option value="feet_follow_hands">Feet follow hands</option>
-              <option value="any_feet">Any feet</option>
-              <option value="only_marked_feet">Only marked feet</option>
-              <option value="feet_follow_hands_open_kicker">Open kicker</option>
-              <option value="campus">Campus</option>
-            </select>
-          </label>
         </div>
+        <p class="hint">
+          Die Fußregel wird für jeden Boulder aus den BoardSesh-Characteristics
+          abgeleitet. „Footless + kickboard“ wird übersprungen, weil CRUX dafür
+          keine exakt passende Fußregel hat.
+        </p>
       </section>
 
       <section class="export">
@@ -107,7 +102,7 @@
     </form>
 
     <footer>
-      <a href="/schema/crux-import-v1.schema.json">JSON-Schema des Importformats</a>
+      <a href="/schema/crux-import-v2.schema.json">JSON-Schema des Importformats</a>
       <span>·</span>
       <span>BoardSesh-Datenquelle: {{ manifest_url }}</span>
     </footer>

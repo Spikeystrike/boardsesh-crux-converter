@@ -24,13 +24,19 @@ class ApiTests(unittest.TestCase):
         self.assertIn("CRUX", response.text)
 
     def test_schema_is_served(self):
-        response = self.client.get("/schema/crux-import-v1.schema.json")
+        response = self.client.get("/schema/crux-import-v2.schema.json")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json()["properties"]["version"]["const"],
-            1,
+            2,
         )
+
+    def test_legacy_schema_is_still_served(self):
+        response = self.client.get("/schema/crux-import-v1.schema.json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["properties"]["version"]["const"], 1)
 
     def test_bridge_mapping_proxy_returns_summaries(self):
         record = {

@@ -11,6 +11,10 @@ class ConversionError(ValueError):
     """Raised when BoardSesh catalog data cannot be converted."""
 
 
+class UnsupportedFootRuleError(ConversionError):
+    """Raised when BoardSesh foot semantics have no exact CRUX equivalent."""
+
+
 ROLE_TO_CRUX = {42: "start", 43: "hand", 44: "finish"}
 ROLE_PRIORITY = {"hand": 1, "start": 2, "finish": 3}
 FRAME_PATTERN = re.compile(r"p(\d+)r(\d+)")
@@ -39,25 +43,50 @@ GRADE_LABELS = {
     33: ("8C+", "8c+", "V16"),
 }
 GRADE_SYSTEM_INDEX = {"boardsesh": 0, "font": 1, "v_scale": 2}
-FOOT_RULES = {
-    "feet_follow_hands",
-    "any_feet",
-    "campus",
-    "feet_follow_hands_open_kicker",
-    "only_marked_feet",
+METHOD_FOOTLESS = "method_footless"
+METHOD_FOOTLESS_KICKBOARD = "method_footless_kickboard"
+METHOD_NO_KICKBOARD = "method_no_kickboard"
+METHOD_CHARACTERISTICS = {
+    METHOD_FOOTLESS,
+    METHOD_FOOTLESS_KICKBOARD,
+    METHOD_NO_KICKBOARD,
 }
 
 
 @dataclass(frozen=True)
 class ConversionOptions:
     grade_system: str = "font"
-    foot_rules: str = "feet_follow_hands"
 
     def validate(self) -> None:
         if self.grade_system not in GRADE_SYSTEM_INDEX:
             raise ConversionError("Unknown grade system")
-        if self.foot_rules not in FOOT_RULES:
-            raise ConversionError("Unknown CRUX foot rule")
+
+
+def foot_rule_from_characteristics(characteristics: Iterable[str]) -> str:
+    tokens = set(characteristics)
+    methods = tokens & METHOD_CHARACTERISTICS
+    if len(methods) > 1:
+        raise UnsupportedFootRuleError(
+            "Multiple MoonBoard method characteristics are set"
+        )
+
+    method = next(iter(methods), None)
+    if method == METHOD_FOOTLESS_KICKBOARD:
+        raise UnsupportedFootRuleError(
+            "MoonBoard footless + kickboard has no exact CRUX foot rule"
+        )
+    if method == METHOD_FOOTLESS:
+        return "campus"
+    if method == METHOD_NO_KICKBOARD:
+        return "feet_follow_hands"
+
+    # BoardSesh also has generic characteristics for boards whose source does
+    # not expose one of the MoonBoard-specific method values.
+    if "campus" in tokens:
+        return "campus"
+    if "no_kickboard" in tokens:
+        return "feet_follow_hands"
+    return "feet_follow_hands_open_kicker"
 
 
 def parse_frames(frames: str) -> list[tuple[int, str]]:
@@ -132,13 +161,30 @@ def convert_catalog(
     converted: list[dict[str, Any]] = []
     skipped_missing_mapping = 0
     skipped_invalid_frames = 0
+    skipped_unsupported_foot_rule = 0
     missing_grade_count = 0
     role_collision_count = 0
+    foot_rule_counts: dict[str, int] = {}
     skipped_examples: list[dict[str, Any]] = []
     input_count = 0
 
     for climb in climbs:
         input_count += 1
+        try:
+            foot_rule = foot_rule_from_characteristics(climb.characteristics)
+        except UnsupportedFootRuleError as exc:
+            skipped_unsupported_foot_rule += 1
+            if len(skipped_examples) < 20:
+                skipped_examples.append(
+                    {
+                        "uuid": climb.uuid,
+                        "name": climb.name,
+                        "reason": "unsupported_foot_rule",
+                        "detail": str(exc),
+                        "characteristics": list(climb.characteristics),
+                    }
+                )
+            continue
         try:
             placements = parse_frames(climb.frames)
         except ConversionError as exc:
@@ -167,6 +213,7 @@ def convert_catalog(
         grade = grade_label(climb.display_difficulty, options.grade_system)
         if grade is None:
             missing_grade_count += 1
+        foot_rule_counts[foot_rule] = foot_rule_counts.get(foot_rule, 0) + 1
         converted.append(
             {
                 "external_id": f"boardsesh:{climb.uuid}:{climb.angle}",
@@ -175,7 +222,7 @@ def convert_catalog(
                 "grade": grade,
                 "angle": str(climb.angle),
                 "color": None,
-                "foot_rules": options.foot_rules,
+                "foot_rules": foot_rule,
                 "setter_name": climb.setter_username,
                 "holds": holds,
                 "source": {
@@ -187,13 +234,14 @@ def convert_catalog(
                     "is_benchmark": climb.benchmark_difficulty is not None,
                     "ascensionist_count": climb.ascensionist_count,
                     "quality_average": climb.quality_average,
+                    "characteristics": list(climb.characteristics),
                 },
             }
         )
 
     return {
         "format": "crux-climb-import",
-        "version": 1,
+        "version": 2,
         "generated_at": generated_at.astimezone(timezone.utc).isoformat(),
         "source": {
             "provider": "BoardSesh",
@@ -212,7 +260,7 @@ def convert_catalog(
         },
         "options": {
             "grade_system": options.grade_system,
-            "foot_rules": options.foot_rules,
+            "foot_rules": "derived_from_boardsesh_characteristics",
             "incomplete_climbs": "skip",
         },
         "summary": {
@@ -220,8 +268,10 @@ def convert_catalog(
             "included_climbs": len(converted),
             "skipped_missing_mapping": skipped_missing_mapping,
             "skipped_invalid_frames": skipped_invalid_frames,
+            "skipped_unsupported_foot_rule": skipped_unsupported_foot_rule,
             "climbs_without_grade": missing_grade_count,
             "crux_role_collisions": role_collision_count,
+            "foot_rule_counts": foot_rule_counts,
             "skipped_examples": skipped_examples,
         },
         "climbs": converted,

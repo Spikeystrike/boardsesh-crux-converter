@@ -150,7 +150,6 @@ form.addEventListener("submit", async (event) => {
     mapping_id: mappingSelect.value || null,
     angle: angleValue ? Number(angleValue) : null,
     grade_system: document.querySelector("#grade-system").value,
-    foot_rules: document.querySelector("#foot-rules").value,
   };
 
   if (uploadedPayload) {
