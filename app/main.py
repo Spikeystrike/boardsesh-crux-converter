@@ -34,7 +34,7 @@ snapshot_service = SnapshotService(
 
 app = FastAPI(
     title="BoardSesh to CRUX Converter",
-    version="0.2.0",
+    version="0.3.0",
 )
 app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=APP_DIR / "templates")

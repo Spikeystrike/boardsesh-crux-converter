@@ -1,36 +1,36 @@
 # boardsesh-crux-converter
 
-Dockerisierte Web-App, die den öffentlichen MoonBoard-Katalog aus den
-[BoardSesh-Snapshots](https://github.com/boardsesh/boardsesh/blob/main/docs/board-snapshots-dataset.md)
-mit einem persistenten Mapping aus der
+A Dockerized web app that combines the public MoonBoard catalog from the
+[BoardSesh snapshots](https://github.com/boardsesh/boardsesh/blob/main/docs/board-snapshots-dataset.md)
+with a persistent mapping from
 [CRUX WLED Bridge](https://github.com/Spikeystrike/crux-wled-bridge)
-verknüpft und eine versionierte CRUX-Importdatei erzeugt.
+and generates a versioned CRUX import file.
 
-> Status: erster importierbarer Austauschformat-Entwurf. Die App schreibt noch
-> nicht direkt in CRUX. Das Format `crux-climb-import/v2` ist in diesem Projekt
-> definiert und bildet die öffentlich dokumentierten CRUX-Climb-Felder ab.
+> Status: first importable interchange-format draft. The app does not write
+> directly to CRUX yet. The `crux-climb-import/v2` format is defined by this
+> project and represents the publicly documented CRUX climb fields.
 
-## Was der Konverter macht
+## What the converter does
 
-- lädt immer den aktuellen BoardSesh-Manifest-Eintrag für das gewählte MoonBoard;
-- unterstützt Standard, Masters und Mini über die BoardSesh-Layout-ID des Mappings;
-- liest mehrere gespeicherte Mappings direkt aus der CRUX WLED Bridge;
-- akzeptiert alternativ exportierte Mapping-JSON-Dateien;
-- filtert optional nach Wandwinkel;
-- konvertiert Start-, Hand- und Finish-Griffe in CRUX-Hold-Typen;
-- leitet die CRUX-Fußregel pro Boulder aus `board_climbs.characteristics` ab;
-- erhält Setter, Grad, Winkel, Benchmark-Status und Community-Statistiken;
-- überspringt Boulder mit fehlenden Hold-Zuordnungen vollständig und dokumentiert
-  sie in `summary.skipped_examples`;
-- überspringt `method_footless_kickboard`, weil CRUX dafür ohne ein separates
-  Kicker-Hold-Mapping keine exakt passende Regel anbietet;
-- cached den validierten SQLite-Snapshot in einem Docker-Volume.
+- always resolves the current BoardSesh manifest entry for the selected MoonBoard;
+- supports Standard, Masters, and Mini through the mapping's BoardSesh layout ID;
+- reads multiple stored mappings directly from CRUX WLED Bridge;
+- alternatively accepts exported mapping JSON files;
+- optionally filters climbs by wall angle;
+- converts start, hand, and finish holds to CRUX hold types;
+- derives the CRUX foot rule for each climb from `board_climbs.characteristics`;
+- preserves setter, grade, angle, benchmark status, and community statistics;
+- skips climbs with incomplete hold mappings and records them in
+  `summary.skipped_examples`;
+- skips `method_footless_kickboard` because CRUX has no exact equivalent
+  without a separate kicker-hold mapping;
+- caches the validated SQLite snapshot in a Docker volume.
 
-Das Mapping bleibt strikt an die CRUX-Wand gebunden:
+Mappings remain strictly bound to their CRUX wall:
 `<wall_id> + <moonboard_hold_id> -> <crux_hold_id(s)>`.
-Es gibt keinen globalen Hold-Fallback.
+There is no global hold fallback.
 
-## Start mit Docker Compose
+## Start with Docker Compose
 
 ```sh
 git clone https://github.com/Spikeystrike/boardsesh-crux-converter.git
@@ -38,78 +38,140 @@ cd boardsesh-crux-converter
 docker compose up --build
 ```
 
-Danach im Browser öffnen:
+Then open:
 
 ```text
 http://localhost:8080
 ```
 
-Wenn die CRUX WLED Bridge auf demselben Docker-Host läuft, kann die App sie über
-`http://host.docker.internal:<PORT>` erreichen. Läuft die Bridge in einem
-anderen Compose-Projekt, können beide Services alternativ in dasselbe externe
-Docker-Netz gehängt werden.
+If CRUX WLED Bridge runs on the same Docker host, the app can reach it at
+`http://host.docker.internal:<PORT>`. If the bridge runs in a different
+Compose project, both services can instead join the same external Docker
+network.
 
-Die App ist für ein vertrauenswürdiges lokales Netz gedacht. Sie nimmt eine
-Bridge-URL entgegen und sollte ohne vorgeschaltete Zugriffskontrolle nicht
-öffentlich ins Internet gestellt werden.
+The app is intended for a trusted local network. It accepts a bridge URL and
+should not be exposed publicly without access control in front of it.
 
-## Bedienung
+## Usage
 
-1. Bridge-URL und CRUX Wall-ID eingeben und die gespeicherten Mappings laden.
-2. Das gewünschte Mapping auswählen. Board, Setup und BoardSesh-Layout-ID werden
-   aus dem persistenten Mapping übernommen.
-3. Optional Winkel und Gradskala wählen. Die Fußregel kommt automatisch aus den
-   BoardSesh-Characteristics.
-4. **CRUX-Importdatei erzeugen** anklicken.
+1. Enter the bridge URL and CRUX wall ID, then load the stored mappings.
+2. Select the required mapping. Board, setup, and BoardSesh layout ID are taken
+   from the persistent mapping.
+3. Optionally select a wall angle and grade scale. The foot rule is derived
+   automatically from the BoardSesh characteristics.
+4. Click **Create CRUX import file**.
 
-Statt der Bridge kann eine JSON-Datei geöffnet werden. Unterstützt werden:
+English is the default interface language. Use the flag in the top-right corner
+to switch to German or back to English. The selection is stored in the browser.
 
-- die Listenantwort `{"mappings": [...]}`;
-- eine Liste serialisierter Mappings;
-- ein einzelnes serialisiertes Mapping;
-- die Save-Antwort `{"mapping": {...}}` der Bridge.
+Instead of connecting to the bridge, you can open a JSON file. The following
+formats are supported:
 
-## Umgebungsvariablen
+- the list response `{"mappings": [...]}`;
+- a list of serialized mappings;
+- a single serialized mapping;
+- the bridge save response `{"mapping": {...}}`.
 
-| Variable | Standard | Bedeutung |
+Example list response containing two selectable mappings:
+
+```json
+{
+  "mappings": [
+    {
+      "id": "moonboard-mini-left",
+      "wallid": 216943,
+      "name": "Mini 2020 left",
+      "board_type": "mini",
+      "setup": "mini_2020",
+      "mapping": {
+        "boardsesh_layout_id": 6,
+        "matches": [
+          {
+            "moonboard_hold_id": 1,
+            "crux_hold_ids": ["8ba97f45a6656519"]
+          },
+          {
+            "moonboard_hold_id": 2,
+            "crux_hold_ids": ["8ba97f45a6656520"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "moonboard-standard-2016",
+      "wallid": 216943,
+      "name": "Standard 2016",
+      "board_type": "standard",
+      "setup": "standard_2016",
+      "mapping": {
+        "boardsesh_layout_id": 2,
+        "matches": [
+          {
+            "moonboard_hold_id": 1,
+            "crux_hold_ids": ["8ba97f45a6656601"]
+          },
+          {
+            "moonboard_hold_id": 2,
+            "crux_hold_ids": [
+              "8ba97f45a6656602",
+              "8ba97f45a6656603"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+The `id` identifies the selectable mapping, `wallid` identifies the target
+CRUX wall, and `boardsesh_layout_id` selects the BoardSesh snapshot.
+Each `matches` entry maps one MoonBoard hold ID to one or more CRUX hold IDs.
+Real exports normally contain a match for every mapped MoonBoard position; the
+example is shortened to two positions per mapping.
+
+## Environment variables
+
+| Variable | Default | Description |
 | --- | --- | --- |
-| `PORT` | `8080` | veröffentlichter Compose-Port |
-| `BOARDSESH_MANIFEST_URL` | offizieller v1-gzip Manifest | BoardSesh-Datenquelle |
-| `CACHE_DIR` | `/data/cache` | Snapshot-Cache im Container |
-| `DOWNLOAD_LIMIT_MB` | `300` | Grenze für Download und entpackte DB |
-| `REQUEST_TIMEOUT_SECONDS` | `60` | HTTP-Timeout |
+| `PORT` | `8080` | Published Compose port |
+| `BOARDSESH_MANIFEST_URL` | Official v1-gzip manifest | BoardSesh data source |
+| `CACHE_DIR` | `/data/cache` | Snapshot cache inside the container |
+| `DOWNLOAD_LIMIT_MB` | `300` | Maximum download and decoded database size |
+| `REQUEST_TIMEOUT_SECONDS` | `60` | HTTP timeout |
 
-BoardSesh veröffentlicht die SQLite-Kataloge laut eigener Dokumentation nachts
-und erwartet, dass Verbraucher die jeweilige Snapshot-URL immer neu über den
-stabilen Manifest ermitteln. Der Konverter folgt diesem Modell, prüft
-`PRAGMA quick_check` und lädt denselben Snapshot nur einmal.
+BoardSesh publishes the SQLite catalogs nightly and requires consumers to
+resolve each snapshot URL through the stable manifest. The converter follows
+that model, runs `PRAGMA quick_check`, and downloads a given snapshot only
+once.
 
-## Fußregeln
+## Foot rules
 
-BoardSesh beschreibt die MoonBoard-Methode in
-`board_climbs.characteristics`. Der Konverter bildet sie so ab:
+BoardSesh stores the MoonBoard method in `board_climbs.characteristics`.
+The converter maps it as follows:
 
-| BoardSesh-Characteristic | Bedeutung | CRUX `foot_rules` |
+| BoardSesh characteristic | Meaning | CRUX `foot_rules` |
 | --- | --- | --- |
-| kein Methodeneintrag | Feet follow hands, Kicker offen | `feet_follow_hands_open_kicker` |
-| `method_no_kickboard` | Feet follow hands, Kicker gesperrt | `feet_follow_hands` |
-| `method_footless` | Keine Füße, kein Kicker | `campus` |
-| `method_footless_kickboard` | Nur Kicker darf als Fuß genutzt werden | wird mit Diagnose übersprungen |
+| No method characteristic | Feet follow hands, kicker open | `feet_follow_hands_open_kicker` |
+| `method_no_kickboard` | Feet follow hands, kicker unavailable | `feet_follow_hands` |
+| `method_footless` | No feet and no kicker | `campus` |
+| `method_footless_kickboard` | Only the kicker may be used for feet | Skipped with a diagnostic |
 
-Die generischen BoardSesh-Characteristics `no_kickboard` und `campus` werden
-ebenfalls auf `feet_follow_hands` beziehungsweise `campus` abgebildet.
-`only_marked_feet` wäre für `method_footless_kickboard` nur dann korrekt, wenn
-alle Kicker-Griffe zusätzlich als CRUX-Fußgriffe markiert würden. Das aktuelle
-persistente Mapping unterscheidet Kicker-Griffe noch nicht separat, daher nimmt
-der Konverter hier keine stillschweigend falsche Zuordnung vor.
+The generic BoardSesh characteristics `no_kickboard` and `campus` are also
+mapped to `feet_follow_hands` and `campus`, respectively.
+`only_marked_feet` would represent `method_footless_kickboard` only if every
+kicker hold were additionally marked as a CRUX foot hold. The current
+persistent mapping does not identify kicker holds separately, so the converter
+does not create a silently incorrect mapping.
 
-## Importformat v2
+## Import format v2
 
-Das vollständige Schema liegt unter
+The complete schema is available at
 [`schema/crux-import-v2.schema.json`](schema/crux-import-v2.schema.json).
-Das bisherige v1-Schema bleibt für bereits erzeugte Dateien erhalten.
+The previous v1 schema remains available for files that have already been
+generated.
 
-Gekürztes Beispiel:
+Abbreviated example:
 
 ```json
 {
@@ -119,7 +181,7 @@ Gekürztes Beispiel:
     "provider": "CRUX",
     "wall_id": 216943,
     "mapping_id": "mapping-uuid",
-    "mapping_name": "Mini 2020 links"
+    "mapping_name": "Mini 2020 left"
   },
   "summary": {
     "input_climbs": 1234,
@@ -135,7 +197,7 @@ Gekürztes Beispiel:
   "climbs": [
     {
       "external_id": "boardsesh:climb-uuid:40",
-      "name": "Beispiel",
+      "name": "Example",
       "grade": "6b",
       "angle": "40",
       "foot_rules": "feet_follow_hands_open_kicker",
@@ -147,26 +209,25 @@ Gekürztes Beispiel:
 }
 ```
 
-Die tatsächliche Datei enthält zusätzlich Provenienz, Optionen,
-Community-Statistiken und Diagnosen. CRUX-Hold-IDs bleiben Strings, damit auch
-die in realen Wall-Daten vorkommenden hexadezimalen IDs verlustfrei erhalten
-bleiben.
+The actual file also contains provenance, options, community statistics, and
+diagnostics. CRUX hold IDs remain strings so hexadecimal IDs found in real wall
+data are preserved without loss.
 
-BoardSesh-Rollencodes werden so abgebildet:
+BoardSesh role codes are mapped as follows:
 
-| BoardSesh | Bedeutung | CRUX `hold_type` |
+| BoardSesh | Meaning | CRUX `hold_type` |
 | --- | --- | --- |
 | `42` | Start | `start` |
 | `43` | Hand | `hand` |
 | `44` | Finish | `finish` |
 
-Das öffentliche
+The public
 [CRUX API Reference](https://docs.cruxapp.ca/api-documentation/api-reference)
-dokumentiert derzeit keinen Bulk-Import-Endpunkt. Deshalb erzeugt diese erste
-Version eine explizit versionierte Datei; der spätere CRUX-Importer kann sich
-gegen das JSON-Schema implementieren, ohne den BoardSesh-Teil neu zu bauen.
+currently documents no bulk-import endpoint. This first version therefore
+generates an explicitly versioned file. A future CRUX importer can implement
+the JSON Schema without rebuilding the BoardSesh side.
 
-## Entwicklung und Tests
+## Development and tests
 
 ```sh
 python -m venv .venv
@@ -176,13 +237,13 @@ python -m unittest discover -s tests -p 'test_*.py'
 docker build -t boardsesh-crux-converter .
 ```
 
-Die Tests prüfen Mapping-Varianten, wall-spezifische Bridge-Abfragen,
-Snapshot-Filter, Frame-Rollen, Gradabbildung, Fehlerdiagnosen, API-Routen und
-das JSON-Schema. GitHub Actions führt Tests und Docker-Build bei jedem Push aus.
+The tests cover mapping variants, wall-specific bridge requests, snapshot
+filters, frame roles, grade conversion, diagnostics, API routes, and the JSON
+Schema. GitHub Actions runs the tests and Docker build on every push.
 
-## Daten und Marken
+## Data and trademarks
 
-Die Kletterdaten stammen aus dem öffentlichen BoardSesh-Datensatz und enthalten
-user-generated content. Setter-Namen werden im Export zur Attribution erhalten.
-MoonBoard und CRUX sind Marken ihrer jeweiligen Rechteinhaber; dieses Projekt ist
-nicht mit ihnen verbunden oder von ihnen unterstützt.
+Climb data comes from the public BoardSesh dataset and contains user-generated
+content. Setter names are retained in the export for attribution. MoonBoard and
+CRUX are trademarks of their respective owners. This project is not affiliated
+with or endorsed by them.

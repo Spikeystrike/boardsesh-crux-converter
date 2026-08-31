@@ -15,6 +15,7 @@ class ApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
+        self.assertEqual(response.json()["version"], "0.3.0")
 
     def test_home_renders(self):
         response = self.client.get("/")
@@ -22,6 +23,18 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("BoardSesh", response.text)
         self.assertIn("CRUX", response.text)
+        self.assertIn('<html lang="en">', response.text)
+        self.assertIn("MoonBoard catalog converter", response.text)
+        self.assertIn('id="language-toggle"', response.text)
+        self.assertIn("Switch to German", response.text)
+
+    def test_language_switch_is_persistent(self):
+        response = self.client.get("/static/app.js")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('LANGUAGE_STORAGE_KEY = "boardsesh-crux-language"', response.text)
+        self.assertIn("localStorage.setItem", response.text)
+        self.assertIn("MoonBoard-Katalogkonverter", response.text)
 
     def test_schema_is_served(self):
         response = self.client.get("/schema/crux-import-v2.schema.json")

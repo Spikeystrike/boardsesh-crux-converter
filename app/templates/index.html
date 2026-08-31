@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,12 +8,22 @@
 </head>
 <body>
   <main class="shell">
+    <button
+      id="language-toggle"
+      class="language-toggle"
+      type="button"
+      aria-label="Switch to German"
+      title="Switch to German"
+    >
+      <span id="language-flag" aria-hidden="true">🇩🇪</span>
+    </button>
+
     <header class="hero">
-      <p class="eyebrow">MoonBoard-Katalogkonverter</p>
+      <p class="eyebrow" data-i18n="catalogConverter">MoonBoard catalog converter</p>
       <h1>BoardSesh → CRUX</h1>
-      <p>
-        Erzeuge eine CRUX-Importdatei aus dem öffentlichen BoardSesh-Snapshot
-        und einem persistenten MoonBoard-Mapping aus der CRUX WLED Bridge.
+      <p data-i18n="heroDescription">
+        Create a CRUX import file from the public BoardSesh snapshot and a
+        persistent MoonBoard mapping from CRUX WLED Bridge.
       </p>
     </header>
 
@@ -22,34 +32,34 @@
         <div class="section-heading">
           <span>1</span>
           <div>
-            <h2>Mapping laden</h2>
-            <p>Direkt von der Bridge oder als zuvor exportierte JSON-Datei.</p>
+            <h2 data-i18n="loadMapping">Load mapping</h2>
+            <p data-i18n="mappingSourceHelp">Directly from the bridge or from a previously exported JSON file.</p>
           </div>
         </div>
 
         <div class="grid two">
           <label>
-            Bridge-URL
+            <span data-i18n="bridgeUrl">Bridge URL</span>
             <input id="bridge-url" type="url" placeholder="http://host.docker.internal:8000">
           </label>
           <label>
-            CRUX Wall-ID
+            <span data-i18n="wallId">CRUX wall ID</span>
             <input id="wall-id" type="number" min="1" placeholder="216943">
           </label>
         </div>
         <div class="actions">
-          <button id="load-bridge" type="button" class="secondary">Mappings von Bridge laden</button>
-          <span class="or">oder</span>
+          <button id="load-bridge" type="button" class="secondary" data-i18n="loadMappings">Load mappings from bridge</button>
+          <span class="or" data-i18n="or">or</span>
           <label class="file-button">
-            Mapping-JSON öffnen
+            <span data-i18n="openMappingJson">Open mapping JSON</span>
             <input id="mapping-file" type="file" accept="application/json,.json">
           </label>
         </div>
 
         <label>
-          Persistentes MoonBoard-Mapping
+          <span data-i18n="persistentMapping">Persistent MoonBoard mapping</span>
           <select id="mapping-select" required disabled>
-            <option value="">Zuerst Mappings laden …</option>
+            <option value="" data-i18n="loadMappingsFirst">Load mappings first …</option>
           </select>
         </label>
         <p id="mapping-info" class="hint"></p>
@@ -59,41 +69,42 @@
         <div class="section-heading">
           <span>2</span>
           <div>
-            <h2>Export einstellen</h2>
-            <p>Board und Setup kommen aus dem ausgewählten Mapping.</p>
+            <h2 data-i18n="configureExport">Configure export</h2>
+            <p data-i18n="mappingProvidesBoard">Board and setup come from the selected mapping.</p>
           </div>
         </div>
 
         <div class="grid two">
           <label>
-            Wandwinkel
+            <span data-i18n="wallAngle">Wall angle</span>
             <select id="angle">
-              <option value="">Alle im Snapshot</option>
+              <option value="" data-i18n="allAngles">All angles in snapshot</option>
               <option value="25">25°</option>
               <option value="40">40°</option>
             </select>
           </label>
           <label>
-            Gradskala
+            <span data-i18n="gradeScale">Grade scale</span>
             <select id="grade-system">
               <option value="font">Fontainebleau</option>
-              <option value="v_scale">V-Skala</option>
+              <option value="v_scale" data-i18n="vScale">V scale</option>
               <option value="boardsesh">BoardSesh/MoonBoard</option>
             </select>
           </label>
         </div>
-        <p class="hint">
-          Die Fußregel wird für jeden Boulder aus den BoardSesh-Characteristics
-          abgeleitet. „Footless + kickboard“ wird übersprungen, weil CRUX dafür
-          keine exakt passende Fußregel hat.
+        <p class="hint" data-i18n="footRuleHint">
+          The foot rule is derived from the BoardSesh characteristics for each
+          climb. “Footless + kickboard” is skipped because CRUX has no exact
+          equivalent.
         </p>
       </section>
 
       <section class="export">
-        <button id="convert" type="submit">CRUX-Importdatei erzeugen</button>
-        <p class="fine-print">
-          Beim ersten Export wird der aktuelle BoardSesh-Snapshot geladen und lokal gecacht.
-          Boulder mit fehlenden Hold-Zuordnungen werden übersprungen und in der Datei protokolliert.
+        <button id="convert" type="submit" data-i18n="createImport">Create CRUX import file</button>
+        <p class="fine-print" data-i18n="exportFinePrint">
+          The current BoardSesh snapshot is downloaded and cached locally on the
+          first export. Climbs with missing hold mappings are skipped and
+          recorded in the file.
         </p>
       </section>
 
@@ -102,9 +113,9 @@
     </form>
 
     <footer>
-      <a href="/schema/crux-import-v2.schema.json">JSON-Schema des Importformats</a>
+      <a href="/schema/crux-import-v2.schema.json" data-i18n="schemaLink">Import format JSON Schema</a>
       <span>·</span>
-      <span>BoardSesh-Datenquelle: {{ manifest_url }}</span>
+      <span><span data-i18n="dataSource">BoardSesh data source</span>: {{ manifest_url }}</span>
     </footer>
   </main>
   <script src="/static/app.js" defer></script>

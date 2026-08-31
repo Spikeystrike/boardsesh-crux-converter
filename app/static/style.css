@@ -19,8 +19,22 @@ body {
   background: radial-gradient(circle at 15% 0%, rgba(215, 255, 63, .08), transparent 30rem), var(--bg);
   color: var(--text);
 }
-.shell { width: min(1040px, calc(100% - 2rem)); margin: 0 auto; padding: 4rem 0 2rem; }
+.shell { position: relative; width: min(1040px, calc(100% - 2rem)); margin: 0 auto; padding: 4rem 0 2rem; }
 .hero { max-width: 760px; margin-bottom: 2rem; }
+.language-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 0;
+  width: 2.9rem;
+  min-height: 2.9rem;
+  padding: 0;
+  border-color: var(--line);
+  background: var(--panel-soft);
+  color: var(--text);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.language-toggle:hover { border-color: var(--accent); }
 .eyebrow { color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 h1 { margin: .2rem 0 .8rem; font-size: clamp(2.5rem, 7vw, 5rem); line-height: .95; letter-spacing: -.055em; }
 .hero > p:last-child, .section-heading p, .hint, .fine-print, footer { color: var(--muted); }
@@ -83,6 +97,7 @@ footer { display: flex; flex-wrap: wrap; gap: .5rem; padding: 1rem .3rem; font-s
 footer a { color: var(--accent); }
 @media (max-width: 720px) {
   .shell { padding-top: 2rem; }
+  .hero { padding-right: 3.5rem; }
   .grid.two, .grid.three { grid-template-columns: 1fr; }
   .actions, .export { align-items: stretch; flex-direction: column; }
   .or { text-align: center; }
