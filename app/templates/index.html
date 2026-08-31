@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BoardSesh → CRUX</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">MoonBoard-Katalogkonverter</p>
+      <h1>BoardSesh → CRUX</h1>
+      <p>
+        Erzeuge eine CRUX-Importdatei aus dem öffentlichen BoardSesh-Snapshot
+        und einem persistenten MoonBoard-Mapping aus der CRUX WLED Bridge.
+      </p>
+    </header>
+
+    <form id="converter-form" class="panel">
+      <section>
+        <div class="section-heading">
+          <span>1</span>
+          <div>
+            <h2>Mapping laden</h2>
+            <p>Direkt von der Bridge oder als zuvor exportierte JSON-Datei.</p>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <label>
+            Bridge-URL
+            <input id="bridge-url" type="url" placeholder="http://host.docker.internal:8000">
+          </label>
+          <label>
+            CRUX Wall-ID
+            <input id="wall-id" type="number" min="1" placeholder="216943">
+          </label>
+        </div>
+        <div class="actions">
+          <button id="load-bridge" type="button" class="secondary">Mappings von Bridge laden</button>
+          <span class="or">oder</span>
+          <label class="file-button">
+            Mapping-JSON öffnen
+            <input id="mapping-file" type="file" accept="application/json,.json">
+          </label>
+        </div>
+
+        <label>
+          Persistentes MoonBoard-Mapping
+          <select id="mapping-select" required disabled>
+            <option value="">Zuerst Mappings laden …</option>
+          </select>
+        </label>
+        <p id="mapping-info" class="hint"></p>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <span>2</span>
+          <div>
+            <h2>Export einstellen</h2>
+            <p>Board und Setup kommen aus dem ausgewählten Mapping.</p>
+          </div>
+        </div>
+
+        <div class="grid three">
+          <label>
+            Wandwinkel
+            <select id="angle">
+              <option value="">Alle im Snapshot</option>
+              <option value="25">25°</option>
+              <option value="40">40°</option>
+            </select>
+          </label>
+          <label>
+            Gradskala
+            <select id="grade-system">
+              <option value="font">Fontainebleau</option>
+              <option value="v_scale">V-Skala</option>
+              <option value="boardsesh">BoardSesh/MoonBoard</option>
+            </select>
+          </label>
+          <label>
+            Fußregel
+            <select id="foot-rules">
+              <option value="feet_follow_hands">Feet follow hands</option>
+              <option value="any_feet">Any feet</option>
+              <option value="only_marked_feet">Only marked feet</option>
+              <option value="feet_follow_hands_open_kicker">Open kicker</option>
+              <option value="campus">Campus</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="export">
+        <button id="convert" type="submit">CRUX-Importdatei erzeugen</button>
+        <p class="fine-print">
+          Beim ersten Export wird der aktuelle BoardSesh-Snapshot geladen und lokal gecacht.
+          Boulder mit fehlenden Hold-Zuordnungen werden übersprungen und in der Datei protokolliert.
+        </p>
+      </section>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <div id="result" class="result" hidden></div>
+    </form>
+
+    <footer>
+      <a href="/schema/crux-import-v1.schema.json">JSON-Schema des Importformats</a>
+      <span>·</span>
+      <span>BoardSesh-Datenquelle: {{ manifest_url }}</span>
+    </footer>
+  </main>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

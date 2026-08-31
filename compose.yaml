@@ -1,0 +1,18 @@
+services:
+  converter:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      BOARDSESH_MANIFEST_URL: "${BOARDSESH_MANIFEST_URL:-https://boardsesh-board-snapshots.t3.tigrisfiles.io/board-snapshots/v1-gzip/manifest.json}"
+      CACHE_DIR: /data/cache
+      DOWNLOAD_LIMIT_MB: "${DOWNLOAD_LIMIT_MB:-300}"
+      REQUEST_TIMEOUT_SECONDS: "${REQUEST_TIMEOUT_SECONDS:-60}"
+    volumes:
+      - boardsesh-cache:/data/cache
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  boardsesh-cache:
