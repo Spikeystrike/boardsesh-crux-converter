@@ -27,7 +27,10 @@ class ApiTests(unittest.TestCase):
         response = self.client.get("/schema/crux-import-v1.schema.json")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["version"]["const"], 1)
+        self.assertEqual(
+            response.json()["properties"]["version"]["const"],
+            1,
+        )
 
     def test_bridge_mapping_proxy_returns_summaries(self):
         record = {
